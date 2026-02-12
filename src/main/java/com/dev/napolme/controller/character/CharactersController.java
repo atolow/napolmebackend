@@ -97,7 +97,7 @@ public class CharactersController {
     }
 
     /**
-     * serverId + characterId 로 저장된 캐릭터 조회 (있으면 id 포함 반환, 없으면 200 + data null).
+     * serverId + characterId 로 저장된 캐릭터 조회. 없으면 공식 API에서 조회 후 저장하고 반환.
      */
     @GetMapping("/by-ref")
     public ResponseEntity<ApiResponse<CharacterResponse>> getByRef(
@@ -106,7 +106,10 @@ public class CharactersController {
     ) {
         return characterFetchService.getByServerIdAndCharacterId(serverId, characterId)
             .map(body -> ResponseEntity.ok(ApiResponse.success(body)))
-            .orElse(ResponseEntity.ok(ApiResponse.success(null)));
+            .orElseGet(() -> {
+                CharacterResponse response = characterFetchService.fetchByRef(serverId, characterId);
+                return ResponseEntity.ok(ApiResponse.success(response));
+            });
     }
 
     /**
