@@ -49,7 +49,9 @@ jobs:
 
             docker stop backend 2>/dev/null || true
             docker rm backend 2>/dev/null || true
+            docker network create napolme-net 2>/dev/null || true
             docker run -d -p 8080:8080 --name backend --restart unless-stopped \
+              --network napolme-net \
               --env-file /home/ec2-user/backend.env \
               $BACKEND_IMAGE
 
