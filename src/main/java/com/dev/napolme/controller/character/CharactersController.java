@@ -97,7 +97,7 @@ public class CharactersController {
     }
 
     /**
-     * serverId + characterId 로 저장된 캐릭터 조회 (있으면 id 포함 반환, 상세 페이지 갱신 버튼용).
+     * serverId + characterId 로 저장된 캐릭터 조회 (있으면 id 포함 반환, 없으면 200 + data null).
      */
     @GetMapping("/by-ref")
     public ResponseEntity<ApiResponse<CharacterResponse>> getByRef(
@@ -106,7 +106,7 @@ public class CharactersController {
     ) {
         return characterFetchService.getByServerIdAndCharacterId(serverId, characterId)
             .map(body -> ResponseEntity.ok(ApiResponse.success(body)))
-            .orElse(ResponseEntity.notFound().build());
+            .orElse(ResponseEntity.ok(ApiResponse.success(null)));
     }
 
     /**
