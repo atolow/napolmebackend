@@ -17,10 +17,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/character/**", "/api/board/**"))
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/character/**", "/api/characters/**", "/api/board/**", "/api/combat-score", "/api/combat-score/**"))
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/character/**", "/api/board/**").permitAll()
+                .requestMatchers("/api/character/**", "/api/characters/**", "/api/board/**", "/api/combat-score", "/api/combat-score/**").permitAll()
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form.disable())
@@ -32,7 +32,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOrigins(List.of(
+            "http://localhost:5173",
+            "https://napolme.com",
+            "https://www.napolme.com"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -40,7 +44,10 @@ public class SecurityConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/character/**", config);
+        source.registerCorsConfiguration("/api/characters/**", config);
         source.registerCorsConfiguration("/api/board/**", config);
+        source.registerCorsConfiguration("/api/combat-score", config);
+        source.registerCorsConfiguration("/api/combat-score/**", config);
         return source;
     }
 }
