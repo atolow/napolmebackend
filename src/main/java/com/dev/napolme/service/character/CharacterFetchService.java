@@ -23,6 +23,8 @@ public class CharacterFetchService {
 
     private static final Logger log = LoggerFactory.getLogger(CharacterFetchService.class);
     private static final String LANG = "ko";
+    /** 정보 갱신 후 재갱신 가능까지 대기 시간(초). 서버가 쿨다운을 관리한다. */
+    private static final int REFRESH_COOLDOWN_SECONDS = 60;
 
     private final PlayNcClient playNcClient;
     private final SavedCharacterRepository savedCharacterRepository;
@@ -104,6 +106,33 @@ public class CharacterFetchService {
         }
         return savedCharacterRepository.findByServerIdAndCharacterId(serverId, characterId)
             .map(this::toResponse);
+    }
+
+    /** 마지막 갱신 시각(lastSyncedAt) 기준 남은 쿨다운(초). 페이지 로드 시 서버가 알려주면 새로고침 후에도 유지된다. */
+    @Transactional(readOnly = true)
+    public int getRemainingRefreshCooldownSeconds(Long savedCharacterId) {
+        return savedCharacterRepository.findById(savedCharacterId)
+            .map(this::remainingCooldownFrom)
+            .orElse(0);
+    }
+
+    @Transactional(readOnly = true)
+    public int getRemainingRefreshCooldownSeconds(String serverId, String characterId) {
+        if (serverId == null || characterId == null || characterId.isBlank()) {
+            return 0;
+        }
+        return savedCharacterRepository.findByServerIdAndCharacterId(serverId, characterId)
+            .map(this::remainingCooldownFrom)
+            .orElse(0);
+    }
+
+    private int remainingCooldownFrom(SavedCharacter c) {
+        Instant last = c.getLastSyncedAt();
+        if (last == null) {
+            return 0;
+        }
+        long elapsed = Instant.now().getEpochSecond() - last.getEpochSecond();
+        return (int) Math.max(0, REFRESH_COOLDOWN_SECONDS - elapsed);
     }
 
     @Transactional

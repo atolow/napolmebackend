@@ -11,6 +11,7 @@ import com.dev.napolme.service.character.CharacterFetchService;
 import com.dev.napolme.service.character.CharacterSearchService;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -96,38 +97,46 @@ public class CharactersController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    private static final int REFRESH_COOLDOWN_SECONDS = 60;
+
     /**
      * serverId + characterId 로 저장된 캐릭터 조회. 없으면 공식 API에서 조회 후 저장하고 반환.
+     * 응답 cooldown: 남은 갱신 쿨다운(초). 새로고침 후에도 서버가 알려주므로 유지된다.
      */
     @GetMapping("/by-ref")
     public ResponseEntity<ApiResponse<CharacterResponse>> getByRef(
         @RequestParam String serverId,
         @RequestParam String characterId
     ) {
-        return characterFetchService.getByServerIdAndCharacterId(serverId, characterId)
-            .map(body -> ResponseEntity.ok(ApiResponse.success(body)))
-            .orElseGet(() -> {
-                CharacterResponse response = characterFetchService.fetchByRef(serverId, characterId);
-                return ResponseEntity.ok(ApiResponse.success(response));
-            });
+        Optional<CharacterResponse> existing = characterFetchService.getByServerIdAndCharacterId(serverId, characterId);
+        if (existing.isPresent()) {
+            int cooldown = characterFetchService.getRemainingRefreshCooldownSeconds(serverId, characterId);
+            return ResponseEntity.ok(ApiResponse.success("OK", existing.get(), false, cooldown));
+        }
+        CharacterResponse response = characterFetchService.fetchByRef(serverId, characterId);
+        int cooldown = characterFetchService.getRemainingRefreshCooldownSeconds(serverId, characterId);
+        return ResponseEntity.ok(ApiResponse.success("OK", response, false, cooldown));
     }
 
     /**
-     * 저장된 캐릭터 ID로 조회.
+     * 저장된 캐릭터 ID로 조회. 응답 cooldown: 남은 갱신 쿨다운(초).
      */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CharacterResponse>> getById(@PathVariable Long id) {
         return characterFetchService.getById(id)
-            .map(body -> ResponseEntity.ok(ApiResponse.success(body)))
+            .map(body -> {
+                int cooldown = characterFetchService.getRemainingRefreshCooldownSeconds(id);
+                return ResponseEntity.ok(ApiResponse.success("OK", body, false, cooldown));
+            })
             .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * 저장된 캐릭터 정보를 공식 API 기준으로 갱신.
+     * 저장된 캐릭터 정보를 공식 API 기준으로 갱신. 응답 cooldown: 60(초). 이 시간 동안 재갱신 제한.
      */
     @PostMapping("/{id}/refresh")
     public ResponseEntity<ApiResponse<CharacterResponse>> refresh(@PathVariable Long id) {
         CharacterResponse response = characterFetchService.refresh(id);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(ApiResponse.success("OK", response, false, REFRESH_COOLDOWN_SECONDS));
     }
 }
