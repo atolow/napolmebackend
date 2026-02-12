@@ -1,9 +1,10 @@
+# 레포 루트가 백엔드일 때 사용 (napolmebackend 레포용)
 FROM eclipse-temurin:17-jdk AS build
 WORKDIR /workspace
-COPY backend/gradlew backend/gradlew.bat backend/settings.gradle backend/build.gradle ./
-COPY backend/gradle ./gradle
+COPY gradlew gradlew.bat settings.gradle build.gradle ./
+COPY gradle ./gradle
 RUN chmod +x ./gradlew
-COPY backend/src ./src
+COPY src ./src
 RUN ./gradlew build -x test
 
 FROM eclipse-temurin:17-jre

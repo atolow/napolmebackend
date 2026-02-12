@@ -1,11 +1,9 @@
-# backend/ 변경 시에만 → 백엔드만 빌드·ECR 푸시·EC2 백엔드 컨테이너만 교체
+# napolmebackend 레포 전용: push 시 백엔드만 빌드·ECR 푸시·EC2 백엔드 컨테이너만 교체
 name: Deploy Backend
 
 on:
   push:
     branches: [main, master]
-    paths:
-      - 'backend/**'
 
 env:
   AWS_REGION: ap-northeast-2
@@ -13,7 +11,7 @@ env:
   BACKEND_REPO: napolme-backend
 
 jobs:
-  deploy-backend:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,7 +29,7 @@ jobs:
 
       - name: Build and push Backend
         run: |
-          docker build -f backend/Dockerfile -t ${{ env.ECR_REGISTRY }}/${{ env.BACKEND_REPO }}:latest .
+          docker build -t ${{ env.ECR_REGISTRY }}/${{ env.BACKEND_REPO }}:latest .
           docker push ${{ env.ECR_REGISTRY }}/${{ env.BACKEND_REPO }}:latest
 
       - name: Deploy Backend to EC2
