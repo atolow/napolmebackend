@@ -56,6 +56,9 @@ public class SavedCharacter {
     @Column(name = "item_level")
     private Integer itemLevel;
 
+    @Column(name = "napolme_point")
+    private Integer napolmePoint;
+
     @Column(name = "last_synced_at")
     private Instant lastSyncedAt;
 
@@ -148,6 +151,14 @@ public class SavedCharacter {
 
     public void setItemLevel(Integer itemLevel) {
         this.itemLevel = itemLevel;
+    }
+
+    public Integer getNapolmePoint() {
+        return napolmePoint;
+    }
+
+    public void setNapolmePoint(Integer napolmePoint) {
+        this.napolmePoint = napolmePoint;
     }
 
     public Instant getLastSyncedAt() {

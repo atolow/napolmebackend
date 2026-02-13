@@ -16,6 +16,7 @@ public record CharacterResponse(
     String guild,
     String profileImage,
     Integer itemLevel,
+    Integer napolmePoint,
     Instant lastSyncedAt,
     Instant createdAt,
     Instant updatedAt

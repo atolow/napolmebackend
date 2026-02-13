@@ -6,6 +6,7 @@ import com.dev.napolme.dto.character.CharacterSummaryDto;
 import com.dev.napolme.dto.plaync.character.PlayNcCharacterInfoResponse;
 import com.dev.napolme.infra.plaync.PlayNcClient;
 import com.dev.napolme.repository.character.SavedCharacterRepository;
+import com.dev.napolme.service.combat.CombatScoreService;
 import com.dev.napolme.util.Aion2UrlParser;
 import java.time.Instant;
 import java.util.List;
@@ -28,13 +29,16 @@ public class CharacterFetchService {
 
     private final PlayNcClient playNcClient;
     private final SavedCharacterRepository savedCharacterRepository;
+    private final CombatScoreService combatScoreService;
 
     public CharacterFetchService(
         PlayNcClient playNcClient,
-        SavedCharacterRepository savedCharacterRepository
+        SavedCharacterRepository savedCharacterRepository,
+        CombatScoreService combatScoreService
     ) {
         this.playNcClient = playNcClient;
         this.savedCharacterRepository = savedCharacterRepository;
+        this.combatScoreService = combatScoreService;
     }
 
     @Transactional
@@ -66,6 +70,8 @@ public class CharacterFetchService {
 
         SavedCharacter entity = fromPlayNcResponse(raw, parsed.serverId(), parsed.characterId());
         entity = savedCharacterRepository.save(entity);
+        updateNapolmePointIfPossible(entity);
+        entity = savedCharacterRepository.save(entity);
         log.info("Saved new character from URL: id={}, nickname={}", entity.getId(), entity.getNickname());
         return toResponse(entity);
     }
@@ -88,6 +94,8 @@ public class CharacterFetchService {
             );
         }
         SavedCharacter entity = fromPlayNcResponse(raw, serverId, characterId);
+        entity = savedCharacterRepository.save(entity);
+        updateNapolmePointIfPossible(entity);
         entity = savedCharacterRepository.save(entity);
         log.info("Saved character by ref: id={}, nickname={}", entity.getId(), entity.getNickname());
         return toResponse(entity);
@@ -154,8 +162,26 @@ public class CharacterFetchService {
 
         updateFromPlayNcResponse(entity, raw);
         entity = savedCharacterRepository.save(entity);
+        updateNapolmePointIfPossible(entity);
+        entity = savedCharacterRepository.save(entity);
         log.info("Refreshed saved character: id={}, nickname={}", entity.getId(), entity.getNickname());
         return toResponse(entity);
+    }
+
+    /** 나폴미 점수 계산 후 저장. 실패 시 로그만 남기고 기존 값 유지. */
+    private void updateNapolmePointIfPossible(SavedCharacter entity) {
+        try {
+            var result = combatScoreService.calculateFromCharacter(
+                entity.getServerId(),
+                entity.getCharacterId(),
+                null,
+                null
+            );
+            long total = result.totalCombatPower();
+            entity.setNapolmePoint(total > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) total);
+        } catch (Exception e) {
+            log.warn("Failed to calculate napolme point for character id={}: {}", entity.getId(), e.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)
@@ -248,6 +274,7 @@ public class CharacterFetchService {
             c.getGuild(),
             c.getProfileImage(),
             c.getItemLevel(),
+            c.getNapolmePoint(),
             c.getLastSyncedAt(),
             c.getCreatedAt(),
             c.getUpdatedAt()
