@@ -3,35 +3,34 @@ package com.dev.napolme.service.logging;
 import com.dev.napolme.domain.logging.SearchLog;
 import com.dev.napolme.repository.logging.SearchLogRepository;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 검색 로그 기록 및 일일 검색 랭킹 조회.
+ * ddl-auto=create 등으로 어제 데이터가 없어도, "이전 조회 시점 랭킹"과 비교해 N▲/N▼ 표시.
  */
 @Service
 public class SearchRankingService {
 
-    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
-
     private final SearchLogRepository searchLogRepository;
+
+    /** 이전에 조회했을 때의 (이름|서버ID) → 순위(1-based). 다음 조회 시 순위 변동 계산에 사용. */
+    private final Map<String, Integer> previousRank = new ConcurrentHashMap<>();
+    /** 직전 계산에 사용한 랭킹 스냅샷 fingerprint(중복 요청 시 같은 결과 반환용). */
+    private volatile String lastRankingFingerprint = null;
+    /** 마지막으로 계산한 응답(동일 스냅샷 재요청 시 재사용). */
+    private volatile List<DailySearchRankItem> lastComputedResult = List.of();
 
     public SearchRankingService(SearchLogRepository searchLogRepository) {
         this.searchLogRepository = searchLogRepository;
     }
 
-    /**
-     * 검색 시 호출. 검색어(캐릭터명) 기록. 비동기로 저장.
-     * @param tribe elyos(천족) 또는 asmo(마족). 검색 결과가 있을 때만 전달.
-     * @param serverId 검색 시 선택한 서버 ID (해당 서버에서 검색했을 때만 전달).
-     */
     @Async
     @Transactional
     public void recordSearch(String characterName, String tribe, String serverId) {
@@ -50,53 +49,78 @@ public class SearchRankingService {
     }
 
     /**
-     * 당일(한국 기준) 검색 횟수 상위 10건. (name, serverId)별 집계, 전일 대비 순위 변동.
+     * 검색 횟수 상위 10건. (전체 기간 기준)
+     * 이전에 조회한 랭킹과 비교해 up/down/changeAmount 계산 후, 이번 결과를 다음 비교용으로 저장.
      */
     @Transactional(readOnly = true)
-    public List<DailySearchRankItem> getDailyTop10() {
-        LocalDate today = LocalDate.now(ZONE);
-        LocalDate yesterday = today.minusDays(1);
-        Instant todayStart = today.atStartOfDay(ZONE).toInstant();
-        Instant todayEnd = today.plusDays(1).atStartOfDay(ZONE).toInstant();
-        Instant yesterdayStart = yesterday.atStartOfDay(ZONE).toInstant();
-        Instant yesterdayEnd = todayStart;
+    public synchronized List<DailySearchRankItem> getDailyTop10() {
+        Instant end = Instant.now().plusSeconds(1);
+        List<Object[]> currentRows = searchLogRepository.findDailyTop10(Instant.EPOCH, end);
+        String currentFingerprint = buildFingerprint(currentRows);
 
-        List<Object[]> todayRows = searchLogRepository.findDailyTop10(todayStart, todayEnd);
-        List<Object[]> yesterdayRows = searchLogRepository.findDailyTop10(yesterdayStart, yesterdayEnd);
-
-        Map<String, Integer> yesterdayRank = new HashMap<>();
-        for (int i = 0; i < yesterdayRows.size(); i++) {
-            Object[] r = yesterdayRows.get(i);
-            String key = rankKey((String) r[0], rowServerId(r));
-            yesterdayRank.put(key, i + 1);
+        // React StrictMode 등으로 동일 요청이 연속 호출되면
+        // 첫 응답의 N▲/N▼가 두 번째 응답에서 same으로 덮이지 않도록 캐시된 결과를 그대로 반환한다.
+        if (lastRankingFingerprint != null && lastRankingFingerprint.equals(currentFingerprint)) {
+            return lastComputedResult;
         }
 
-        return buildWithRankChange(todayRows, yesterdayRank);
+        List<DailySearchRankItem> result = buildWithRankChange(currentRows, previousRank);
+
+        previousRank.clear();
+        for (int i = 0; i < currentRows.size(); i++) {
+            Object[] row = currentRows.get(i);
+            String key = rankKey(rowName(row), rowServerId(row));
+            previousRank.put(key, i + 1);
+        }
+
+        lastRankingFingerprint = currentFingerprint;
+        lastComputedResult = List.copyOf(result);
+        return lastComputedResult;
     }
 
     private static String rankKey(String name, String serverId) {
-        return name + "|" + (serverId != null ? serverId : "");
+        String n = name != null ? name.trim() : "";
+        String s = (serverId != null && !serverId.isBlank()) ? String.valueOf(serverId).trim() : "";
+        return n + "|" + s;
     }
 
     private static String rowServerId(Object[] row) {
-        return row.length > 3 && row[1] != null ? (String) row[1] : null;
+        if (row.length <= 1 || row[1] == null) return null;
+        Object v = row[1];
+        String s = v instanceof String ? (String) v : String.valueOf(v);
+        return s.isBlank() ? null : s.trim();
+    }
+
+    private static String rowName(Object[] row) {
+        Object v = row[0];
+        return v == null ? "" : (v instanceof String ? (String) v : String.valueOf(v)).trim();
+    }
+
+    private String buildFingerprint(List<Object[]> rows) {
+        StringBuilder sb = new StringBuilder(rows.size() * 32);
+        for (Object[] row : rows) {
+            String key = rankKey(rowName(row), rowServerId(row));
+            long count = row.length > 3 && row[3] instanceof Number ? ((Number) row[3]).longValue() : 0L;
+            sb.append(key).append(':').append(count).append(';');
+        }
+        return sb.toString();
     }
 
     private List<DailySearchRankItem> buildWithRankChange(
-        List<Object[]> todayRows,
-        Map<String, Integer> yesterdayRank
+        List<Object[]> currentRows,
+        Map<String, Integer> previousRankMap
     ) {
         List<DailySearchRankItem> result = new ArrayList<>();
-        for (int i = 0; i < todayRows.size(); i++) {
-            Object[] row = todayRows.get(i);
-            String name = (String) row[0];
+        for (int i = 0; i < currentRows.size(); i++) {
+            Object[] row = currentRows.get(i);
+            String name = rowName(row);
             String rawServerId = rowServerId(row);
             String serverId = (rawServerId == null || rawServerId.isBlank()) ? null : rawServerId;
-            String tribe = row.length > 3 && row[2] != null ? (String) row[2] : (row.length > 2 && row[1] != null ? (String) row[1] : null);
-            long count = ((Number) row[row.length > 3 ? 3 : (row.length > 2 ? 2 : 1)]).longValue();
+            String tribe = row.length > 2 && row[2] != null ? String.valueOf(row[2]) : null;
+            long count = row.length > 3 && row[3] instanceof Number ? ((Number) row[3]).longValue() : 0L;
             int currentRank = i + 1;
             String key = rankKey(name, rawServerId);
-            Integer prevRank = yesterdayRank.get(key);
+            Integer prevRank = previousRankMap.get(key);
             String rankChange;
             int changeAmount = 0;
             if (prevRank == null) {
