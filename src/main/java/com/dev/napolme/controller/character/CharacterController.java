@@ -56,8 +56,8 @@ public class CharacterController {
     @GetMapping("/search")
     public ApiResponse<CharacterSearchResponse> search(@ModelAttribute CharacterSearchRequest request) {
         CharacterSearchResponse response = characterSearchService.search(request);
-        if (request.getQuery() != null && !request.getQuery().isBlank()) {
-            String tribe = response.items().isEmpty() ? null : response.items().get(0).tribe();
+        if (request.getQuery() != null && !request.getQuery().isBlank() && !response.items().isEmpty()) {
+            String tribe = response.items().get(0).tribe();
             searchRankingService.recordSearch(request.getQuery(), tribe);
         }
         return ApiResponse.success("OK", response, response.cache().cacheHit(), 0);

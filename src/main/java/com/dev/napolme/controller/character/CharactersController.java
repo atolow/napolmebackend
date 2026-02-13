@@ -69,8 +69,10 @@ public class CharactersController {
     ) {
         if (nickname != null && !nickname.isBlank()) {
             List<CharacterSummaryDto> items = characterFetchService.searchByNickname(nickname);
-            String tribe = items.isEmpty() ? null : items.get(0).tribe();
-            searchRankingService.recordSearch(nickname, tribe);
+            if (!items.isEmpty()) {
+                String tribe = items.get(0).tribe();
+                searchRankingService.recordSearch(nickname, tribe);
+            }
             return ResponseEntity.ok(ApiResponse.success(new CharacterSearchResponse(
                 nickname,
                 null,
@@ -84,8 +86,10 @@ public class CharactersController {
             req.setQuery(name);
             req.setServer(server);
             CharacterSearchResponse response = characterSearchService.search(req);
-            String tribe = response.items().isEmpty() ? null : response.items().get(0).tribe();
-            searchRankingService.recordSearch(name, tribe);
+            if (!response.items().isEmpty()) {
+                String tribe = response.items().get(0).tribe();
+                searchRankingService.recordSearch(name, tribe);
+            }
             return ResponseEntity.ok(ApiResponse.success("OK", response, response.cache().cacheHit(), 0));
         }
         return ResponseEntity.badRequest().body(

@@ -84,19 +84,22 @@ public class SearchRankingService {
             int currentRank = i + 1;
             Integer prevRank = yesterdayRank.get(name);
             String rankChange;
+            int changeAmount = 0;
             if (prevRank == null) {
                 rankChange = "new";
             } else if (currentRank < prevRank) {
                 rankChange = "up";
+                changeAmount = prevRank - currentRank;
             } else if (currentRank > prevRank) {
                 rankChange = "down";
+                changeAmount = currentRank - prevRank;
             } else {
                 rankChange = "same";
             }
-            result.add(new DailySearchRankItem(name, count, rankChange, tribe));
+            result.add(new DailySearchRankItem(name, count, rankChange, changeAmount, tribe));
         }
         return result;
     }
 
-    public record DailySearchRankItem(String name, long count, String rankChange, String tribe) {}
+    public record DailySearchRankItem(String name, long count, String rankChange, int changeAmount, String tribe) {}
 }
