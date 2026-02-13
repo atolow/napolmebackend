@@ -47,6 +47,10 @@ public class SavedCharacter {
     @Column(name = "class_name", length = 30)
     private String className;
 
+    /** 종족: elyos(천족), asmo(마족) */
+    @Column(name = "tribe", length = 10)
+    private String tribe;
+
     @Column(length = 50)
     private String guild;
 
@@ -127,6 +131,14 @@ public class SavedCharacter {
 
     public void setClassName(String className) {
         this.className = className;
+    }
+
+    public String getTribe() {
+        return tribe;
+    }
+
+    public void setTribe(String tribe) {
+        this.tribe = tribe;
     }
 
     public String getGuild() {

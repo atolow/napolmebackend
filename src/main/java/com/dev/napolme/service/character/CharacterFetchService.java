@@ -208,6 +208,7 @@ public class CharacterFetchService {
         c.setLevel(p.characterLevel() != null ? p.characterLevel() : 1);
         c.setServerName(p.serverName());
         c.setClassName(p.className());
+        c.setTribe(tribeFromRaceId(p.raceId()));
         c.setGuild(extractGuildFromPlayNcResponse(raw));
         c.setProfileImage(normalizeProfileImage(p.profileImage()));
         c.setItemLevel(extractItemLevel(raw));
@@ -221,10 +222,21 @@ public class CharacterFetchService {
         entity.setLevel(p.characterLevel() != null ? p.characterLevel() : 1);
         entity.setServerName(p.serverName());
         entity.setClassName(p.className());
+        entity.setTribe(tribeFromRaceId(p.raceId()));
         entity.setGuild(extractGuildFromPlayNcResponse(raw));
         entity.setProfileImage(normalizeProfileImage(p.profileImage()));
         entity.setItemLevel(extractItemLevel(raw));
         entity.setLastSyncedAt(Instant.now());
+    }
+
+    /** PlayNC raceId → tribe: 1=천족(elyos), 2=마족(asmo) */
+    private String tribeFromRaceId(Integer raceId) {
+        if (raceId == null) return null;
+        return switch (raceId) {
+            case 1 -> "elyos";
+            case 2 -> "asmo";
+            default -> null;
+        };
     }
 
     /** PlayNC 응답에서 길드명 추출 (ranking 목록의 첫 번째 non-null guildName 사용) */
@@ -271,6 +283,7 @@ public class CharacterFetchService {
             c.getLevel(),
             c.getServerName(),
             c.getClassName(),
+            c.getTribe(),
             c.getGuild(),
             c.getProfileImage(),
             c.getItemLevel(),
@@ -291,7 +304,8 @@ public class CharacterFetchService {
             null,
             null,
             c.getProfileImage(),
-            c.getItemLevel()
+            c.getItemLevel(),
+            c.getTribe()
         );
     }
 

@@ -9,6 +9,7 @@ import com.dev.napolme.dto.cache.CachePolicyDto;
 import com.dev.napolme.dto.character.CharacterSummaryDto;
 import com.dev.napolme.service.character.CharacterFetchService;
 import com.dev.napolme.service.character.CharacterSearchService;
+import com.dev.napolme.service.logging.SearchRankingService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
@@ -32,13 +33,16 @@ public class CharactersController {
 
     private final CharacterFetchService characterFetchService;
     private final CharacterSearchService characterSearchService;
+    private final SearchRankingService searchRankingService;
 
     public CharactersController(
         CharacterFetchService characterFetchService,
-        CharacterSearchService characterSearchService
+        CharacterSearchService characterSearchService,
+        SearchRankingService searchRankingService
     ) {
         this.characterFetchService = characterFetchService;
         this.characterSearchService = characterSearchService;
+        this.searchRankingService = searchRankingService;
     }
 
     /**
@@ -65,6 +69,8 @@ public class CharactersController {
     ) {
         if (nickname != null && !nickname.isBlank()) {
             List<CharacterSummaryDto> items = characterFetchService.searchByNickname(nickname);
+            String tribe = items.isEmpty() ? null : items.get(0).tribe();
+            searchRankingService.recordSearch(nickname, tribe);
             return ResponseEntity.ok(ApiResponse.success(new CharacterSearchResponse(
                 nickname,
                 null,
@@ -78,6 +84,8 @@ public class CharactersController {
             req.setQuery(name);
             req.setServer(server);
             CharacterSearchResponse response = characterSearchService.search(req);
+            String tribe = response.items().isEmpty() ? null : response.items().get(0).tribe();
+            searchRankingService.recordSearch(name, tribe);
             return ResponseEntity.ok(ApiResponse.success("OK", response, response.cache().cacheHit(), 0));
         }
         return ResponseEntity.badRequest().body(

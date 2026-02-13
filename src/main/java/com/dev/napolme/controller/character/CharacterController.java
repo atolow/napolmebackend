@@ -15,6 +15,7 @@ import com.dev.napolme.service.character.CharacterDaevanionService;
 import com.dev.napolme.service.character.CharacterEquipmentService;
 import com.dev.napolme.service.character.CharacterEquipmentItemService;
 import com.dev.napolme.service.character.CharacterAnalysisService;
+import com.dev.napolme.service.logging.SearchRankingService;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -34,24 +35,31 @@ public class CharacterController {
     private final CharacterSearchService characterSearchService;
     private final CharacterEquipmentItemService characterEquipmentItemService;
     private final CharacterDaevanionService characterDaevanionService;
+    private final SearchRankingService searchRankingService;
 
     public CharacterController(
         CharacterAnalysisService characterAnalysisService,
         CharacterEquipmentService characterEquipmentService,
         CharacterSearchService characterSearchService,
         CharacterEquipmentItemService characterEquipmentItemService,
-        CharacterDaevanionService characterDaevanionService
+        CharacterDaevanionService characterDaevanionService,
+        SearchRankingService searchRankingService
     ) {
         this.characterAnalysisService = characterAnalysisService;
         this.characterEquipmentService = characterEquipmentService;
         this.characterSearchService = characterSearchService;
         this.characterEquipmentItemService = characterEquipmentItemService;
         this.characterDaevanionService = characterDaevanionService;
+        this.searchRankingService = searchRankingService;
     }
 
     @GetMapping("/search")
     public ApiResponse<CharacterSearchResponse> search(@ModelAttribute CharacterSearchRequest request) {
         CharacterSearchResponse response = characterSearchService.search(request);
+        if (request.getQuery() != null && !request.getQuery().isBlank()) {
+            String tribe = response.items().isEmpty() ? null : response.items().get(0).tribe();
+            searchRankingService.recordSearch(request.getQuery(), tribe);
+        }
         return ApiResponse.success("OK", response, response.cache().cacheHit(), 0);
     }
 

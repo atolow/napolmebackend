@@ -9,5 +9,6 @@ public record CharacterSummaryDto(
     Integer race,
     Integer classId,
     String profileImageUrl,
-    Integer combatPower
+    Integer combatPower,
+    String tribe
 ) {}

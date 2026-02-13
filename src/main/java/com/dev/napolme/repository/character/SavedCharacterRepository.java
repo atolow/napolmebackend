@@ -10,4 +10,7 @@ public interface SavedCharacterRepository extends JpaRepository<SavedCharacter, 
     Optional<SavedCharacter> findByServerIdAndCharacterId(String serverId, String characterId);
 
     List<SavedCharacter> findByNicknameContainingIgnoreCase(String nickname);
+
+    /** 종족별 나폴미 점수 상위 5명 (napolme_point가 있는 것만) */
+    List<SavedCharacter> findTop5ByTribeAndNapolmePointIsNotNullOrderByNapolmePointDesc(String tribe);
 }

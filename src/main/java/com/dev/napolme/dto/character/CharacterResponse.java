@@ -13,6 +13,7 @@ public record CharacterResponse(
     Integer level,
     String serverName,
     String className,
+    String tribe,
     String guild,
     String profileImage,
     Integer itemLevel,

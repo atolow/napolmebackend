@@ -61,6 +61,7 @@ public class CharacterSearchService {
                 item.serverId(),
                 decodeCharacterId(item.characterId())
             );
+            String tribe = item.race() != null && item.race() == 1 ? "elyos" : item.race() != null && item.race() == 2 ? "asmo" : null;
             items.add(new CharacterSummaryDto(
                 decodeCharacterId(item.characterId()),
                 name,
@@ -70,7 +71,8 @@ public class CharacterSearchService {
                 item.race(),
                 item.pcId(),
                 normalizeProfileUrl(item.profileImageUrl()),
-                combatPower
+                combatPower,
+                tribe
             ));
         }
 

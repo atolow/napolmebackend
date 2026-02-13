@@ -17,10 +17,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/character/**", "/api/characters/**", "/api/board/**", "/api/combat-score", "/api/combat-score/**"))
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/character/**", "/api/characters/**", "/api/board/**", "/api/combat-score", "/api/combat-score/**", "/api/stat/**"))
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/character/**", "/api/characters/**", "/api/board/**", "/api/combat-score", "/api/combat-score/**").permitAll()
+                .requestMatchers("/api/character/**", "/api/characters/**", "/api/board/**", "/api/combat-score", "/api/combat-score/**", "/api/stat/**").permitAll()
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form.disable())
@@ -48,6 +48,7 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/api/board/**", config);
         source.registerCorsConfiguration("/api/combat-score", config);
         source.registerCorsConfiguration("/api/combat-score/**", config);
+        source.registerCorsConfiguration("/api/stat/**", config);
         return source;
     }
 }
