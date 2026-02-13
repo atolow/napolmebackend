@@ -90,6 +90,7 @@ public class StatController {
         return new NapolmeRankItemDto(
             c.getNickname(),
             c.getNapolmePoint(),
+            c.getServerId(),
             c.getServerName()
         );
     }

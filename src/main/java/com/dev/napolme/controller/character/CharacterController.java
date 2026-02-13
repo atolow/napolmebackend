@@ -58,7 +58,8 @@ public class CharacterController {
         CharacterSearchResponse response = characterSearchService.search(request);
         if (request.getQuery() != null && !request.getQuery().isBlank() && !response.items().isEmpty()) {
             String tribe = response.items().get(0).tribe();
-            searchRankingService.recordSearch(request.getQuery(), tribe);
+            String serverId = request.getServer();
+            searchRankingService.recordSearch(request.getQuery(), tribe, serverId);
         }
         return ApiResponse.success("OK", response, response.cache().cacheHit(), 0);
     }

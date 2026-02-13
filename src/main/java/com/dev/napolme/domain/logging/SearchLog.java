@@ -27,6 +27,10 @@ public class SearchLog {
     @Column(name = "tribe", length = 10)
     private String tribe;
 
+    /** 검색 시 선택한 서버 ID (해당 서버에서 검색했을 때만 기록). */
+    @Column(name = "server_id", length = 10)
+    private String serverId;
+
     @Column(name = "searched_at", nullable = false, updatable = false)
     private Instant searchedAt;
 
@@ -50,6 +54,13 @@ public class SearchLog {
         this.searchedAt = Instant.now();
     }
 
+    public SearchLog(String characterName, String tribe, String serverId) {
+        this.characterName = characterName;
+        this.tribe = tribe;
+        this.serverId = serverId;
+        this.searchedAt = Instant.now();
+    }
+
     public Long getId() {
         return id;
     }
@@ -68,6 +79,14 @@ public class SearchLog {
 
     public void setTribe(String tribe) {
         this.tribe = tribe;
+    }
+
+    public String getServerId() {
+        return serverId;
+    }
+
+    public void setServerId(String serverId) {
+        this.serverId = serverId;
     }
 
     public Instant getSearchedAt() {
