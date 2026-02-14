@@ -38,9 +38,13 @@ public class BoardUpdateController {
     }
 
     @GetMapping("/napolme-updates")
-    public ApiResponse<NapolmeUpdatesResponse> getNapolmeUpdates(HttpServletRequest request) {
+    public ApiResponse<NapolmeUpdatesResponse> getNapolmeUpdates(
+        HttpServletRequest request,
+        @RequestParam(required = false) String debug
+    ) {
         String clientIp = extractClientIp(request);
-        NapolmeUpdatesResponse response = napolmeUpdateService.getList(clientIp);
+        boolean includeSeenIp = "1".equals(debug);
+        NapolmeUpdatesResponse response = napolmeUpdateService.getList(clientIp, includeSeenIp);
         return ApiResponse.success(response);
     }
 
@@ -62,15 +66,30 @@ public class BoardUpdateController {
         }
     }
 
+    /**
+     * 프록시/로드밸런서 뒤에서 실제 클라이언트 IP 추출.
+     * Cloudflare(CF-Connecting-IP), X-Forwarded-For(첫 값·마지막 값), X-Real-IP 순으로 확인.
+     */
     private static String extractClientIp(HttpServletRequest request) {
+        String cf = request.getHeader("CF-Connecting-IP");
+        if (cf != null && !cf.isBlank()) return cf.trim();
+
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isBlank()) {
-            String first = xForwardedFor.split(",")[0].trim();
+            String[] parts = xForwardedFor.split(",");
+            String first = parts[0].trim();
             if (!first.isBlank()) return first;
+            if (parts.length > 1) {
+                String last = parts[parts.length - 1].trim();
+                if (!last.isBlank()) return last;
+            }
         }
+
         String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isBlank()) return xRealIp;
-        return request.getRemoteAddr() != null ? request.getRemoteAddr() : "";
+        if (xRealIp != null && !xRealIp.isBlank()) return xRealIp.trim();
+
+        String remote = request.getRemoteAddr();
+        return remote != null ? remote : "";
     }
 
     public record CreateNapolmeUpdateRequest(String title, String content) {}
