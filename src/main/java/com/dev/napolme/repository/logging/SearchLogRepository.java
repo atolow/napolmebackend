@@ -3,6 +3,7 @@ package com.dev.napolme.repository.logging;
 import com.dev.napolme.domain.logging.SearchLog;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,16 +13,19 @@ import org.springframework.stereotype.Repository;
 public interface SearchLogRepository extends JpaRepository<SearchLog, Long> {
 
     /**
-     * 지정 구간(한국 시간 기준 datetime) 검색 로그에서 (캐릭터명, 서버ID)별 건수 상위 10개.
-     * server_id 없이 검색한 건은 NULL로 묶어서 집계.
+     * 당일(한국 시간) 검색 로그에서 (캐릭터명, 서버ID)별 건수 상위 10개.
+     * JPQL 사용으로 LocalDateTime 바인딩이 엔티티와 동일하게 동작(500 방지).
      */
-    @Query(value = """
-        SELECT s.character_name AS name, s.server_id AS server_id, MAX(s.tribe) AS tribe, COUNT(*) AS cnt
-        FROM search_logs s
-        WHERE s.searched_at >= :dayStart AND s.searched_at < :dayEnd
-        GROUP BY s.character_name, s.server_id
-        ORDER BY cnt DESC
-        LIMIT 10
-        """, nativeQuery = true)
-    List<Object[]> findDailyTop10(@Param("dayStart") LocalDateTime dayStart, @Param("dayEnd") LocalDateTime dayEnd);
+    @Query("""
+        SELECT s.characterName, s.serverId, MAX(s.tribe), COUNT(s)
+        FROM SearchLog s
+        WHERE s.searchedAt >= :dayStart AND s.searchedAt < :dayEnd
+        GROUP BY s.characterName, s.serverId
+        ORDER BY COUNT(s) DESC
+        """)
+    List<Object[]> findDailyTop10(
+        @Param("dayStart") LocalDateTime dayStart,
+        @Param("dayEnd") LocalDateTime dayEnd,
+        Pageable pageable
+    );
 }
