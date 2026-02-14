@@ -8,13 +8,13 @@ import org.springframework.stereotype.Component;
 public class AutoBlockProperties {
 
     private boolean enabled = true;
-    private int failureThreshold = 10;
-    private int failureWindowSeconds = 30;
-    private int patternThreshold = 20;
-    private int patternWindowSeconds = 10;
-    private int uaUniqueThreshold = 5;
-    private int uaWindowSeconds = 60;
-    private int blockSeconds = 600;
+    private int failureThreshold = 50;
+    private int failureWindowSeconds = 300;
+    private int patternThreshold = 30;
+    private int patternWindowSeconds = 300;
+    private int uaUniqueThreshold = 200;
+    private int uaWindowSeconds = 300;
+    private int blockSeconds = 1800;
 
     public boolean isEnabled() {
         return enabled;
