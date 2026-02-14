@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/character")
@@ -54,12 +55,16 @@ public class CharacterController {
     }
 
     @GetMapping("/search")
-    public ApiResponse<CharacterSearchResponse> search(@ModelAttribute CharacterSearchRequest request) {
+    public ApiResponse<CharacterSearchResponse> search(
+        HttpServletRequest httpRequest,
+        @ModelAttribute CharacterSearchRequest request
+    ) {
         CharacterSearchResponse response = characterSearchService.search(request);
         if (request.getQuery() != null && !request.getQuery().isBlank() && !response.items().isEmpty()) {
             String tribe = response.items().get(0).tribe();
             String serverId = request.getServer();
-            searchRankingService.recordSearch(request.getQuery(), tribe, serverId);
+            String clientIp = extractClientIp(httpRequest);
+            searchRankingService.recordSearch(request.getQuery(), tribe, serverId, clientIp);
         }
         return ApiResponse.success("OK", response, response.cache().cacheHit(), 0);
     }
@@ -165,5 +170,25 @@ public class CharacterController {
             lang
         );
         return ApiResponse.success("OK", response, response.cache().cacheHit(), 0);
+    }
+
+    private static String extractClientIp(HttpServletRequest request) {
+        if (request == null) return "";
+        String cf = request.getHeader("CF-Connecting-IP");
+        if (cf != null && !cf.isBlank()) return cf.trim();
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
+            String[] parts = xForwardedFor.split(",");
+            String first = parts[0].trim();
+            if (!first.isBlank()) return first;
+            if (parts.length > 1) {
+                String last = parts[parts.length - 1].trim();
+                if (!last.isBlank()) return last;
+            }
+        }
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isBlank()) return xRealIp.trim();
+        String remote = request.getRemoteAddr();
+        return remote != null ? remote : "";
     }
 }

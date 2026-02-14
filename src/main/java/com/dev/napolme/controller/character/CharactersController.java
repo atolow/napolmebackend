@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 캐릭터 API: URL로 가져오기, 검색(server+name 또는 nickname), ID 조회, 갱신.
@@ -66,11 +67,13 @@ public class CharactersController {
      */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<?>> search(
+        HttpServletRequest request,
         @RequestParam(required = false) String server,
         @RequestParam(required = false) String name,
         @RequestParam(required = false) String nickname,
         @RequestParam(required = false) Integer race
     ) {
+        String clientIp = extractClientIp(request);
         if (nickname != null && !nickname.isBlank()) {
             List<CharacterSummaryDto> items = characterFetchService.searchByNickname(nickname);
             String redirectUrl = null;
@@ -83,7 +86,7 @@ public class CharactersController {
             if (!items.isEmpty()) {
                 String tribe = items.get(0).tribe();
                 String serverId = items.get(0).serverId() != null ? String.valueOf(items.get(0).serverId()) : null;
-                searchRankingService.recordSearch(nickname, tribe, serverId);
+                searchRankingService.recordSearch(nickname, tribe, serverId, clientIp);
             }
             return ResponseEntity.ok(ApiResponse.success(new CharacterSearchResponse(
                 nickname,
@@ -115,7 +118,7 @@ public class CharactersController {
             if (!response.items().isEmpty()) {
                 String tribe = response.items().get(0).tribe();
                 String serverId = req.getServer();
-                searchRankingService.recordSearch(name, tribe, serverId);
+                searchRankingService.recordSearch(name, tribe, serverId, clientIp);
             }
             // redirectUrl을 포함한 새로운 응답 생성
             CharacterSearchResponse responseWithRedirect = new CharacterSearchResponse(
@@ -201,5 +204,25 @@ public class CharactersController {
         }
         CharacterResponse response = characterFetchService.refresh(id);
         return ResponseEntity.ok(ApiResponse.success("OK", response, false, REFRESH_COOLDOWN_SECONDS));
+    }
+
+    private static String extractClientIp(HttpServletRequest request) {
+        if (request == null) return "";
+        String cf = request.getHeader("CF-Connecting-IP");
+        if (cf != null && !cf.isBlank()) return cf.trim();
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
+            String[] parts = xForwardedFor.split(",");
+            String first = parts[0].trim();
+            if (!first.isBlank()) return first;
+            if (parts.length > 1) {
+                String last = parts[parts.length - 1].trim();
+                if (!last.isBlank()) return last;
+            }
+        }
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isBlank()) return xRealIp.trim();
+        String remote = request.getRemoteAddr();
+        return remote != null ? remote : "";
     }
 }

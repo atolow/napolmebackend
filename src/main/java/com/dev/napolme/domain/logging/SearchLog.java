@@ -35,6 +35,10 @@ public class SearchLog {
     @Column(name = "server_id", length = 10)
     private String serverId;
 
+    /** 검색 요청 클라이언트 IP (프록시 시 X-Forwarded-For 등 반영). */
+    @Column(name = "ip", length = 45)
+    private String ip;
+
     @Column(name = "searched_at", nullable = false, updatable = false, columnDefinition = "DATETIME")
     private LocalDateTime searchedAt;
 
@@ -91,6 +95,14 @@ public class SearchLog {
 
     public void setServerId(String serverId) {
         this.serverId = serverId;
+    }
+
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = (ip != null && ip.length() > 45) ? ip.substring(0, 45) : ip;
     }
 
     public LocalDateTime getSearchedAt() {

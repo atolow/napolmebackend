@@ -33,9 +33,9 @@ public class SearchRankingService {
         this.searchLogRepository = searchLogRepository;
     }
 
-    /** 동기 처리로 검색 응답 전에 DB 반영 → 직후 일일 랭킹 조회 시 포함됨 */
+    /** 동기 처리로 검색 응답 전에 DB 반영 → 직후 일일 랭킹 조회 시 포함됨. clientIp는 nullable. */
     @Transactional
-    public void recordSearch(String characterName, String tribe, String serverId) {
+    public void recordSearch(String characterName, String tribe, String serverId, String clientIp) {
         if (characterName == null || characterName.isBlank()) {
             return;
         }
@@ -44,9 +44,13 @@ public class SearchRankingService {
             trimmed = trimmed.substring(0, 100);
         }
         if (tribe != null && (tribe.equals("elyos") || tribe.equals("asmo"))) {
-            searchLogRepository.save(new SearchLog(trimmed, tribe, serverId));
+            SearchLog log = new SearchLog(trimmed, tribe, serverId);
+            log.setIp(clientIp);
+            searchLogRepository.save(log);
         } else {
-            searchLogRepository.save(new SearchLog(trimmed));
+            SearchLog log = new SearchLog(trimmed);
+            log.setIp(clientIp);
+            searchLogRepository.save(log);
         }
     }
 
