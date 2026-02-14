@@ -9,6 +9,6 @@ public class TimeConfig {
 
     @PostConstruct
     public void setDefaultTimezone() {
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
     }
 }
