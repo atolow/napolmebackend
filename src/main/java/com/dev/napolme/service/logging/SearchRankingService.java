@@ -2,7 +2,8 @@ package com.dev.napolme.service.logging;
 
 import com.dev.napolme.domain.logging.SearchLog;
 import com.dev.napolme.repository.logging.SearchLogRepository;
-import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -52,10 +53,12 @@ public class SearchRankingService {
      * 검색 횟수 상위 10건. (전체 기간 기준)
      * 이전에 조회한 랭킹과 비교해 up/down/changeAmount 계산 후, 이번 결과를 다음 비교용으로 저장.
      */
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+
     @Transactional(readOnly = true)
     public synchronized List<DailySearchRankItem> getDailyTop10() {
-        Instant end = Instant.now().plusSeconds(1);
-        List<Object[]> currentRows = searchLogRepository.findDailyTop10(Instant.EPOCH, end);
+        LocalDateTime end = LocalDateTime.now(SEOUL).plusSeconds(1);
+        List<Object[]> currentRows = searchLogRepository.findDailyTop10(LocalDateTime.MIN, end);
         String currentFingerprint = buildFingerprint(currentRows);
 
         // React StrictMode 등으로 동일 요청이 연속 호출되면

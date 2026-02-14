@@ -4,6 +4,9 @@ import com.dev.napolme.domain.board.NapolmeUpdate;
 import com.dev.napolme.dto.board.NapolmeUpdateItemDto;
 import com.dev.napolme.dto.board.NapolmeUpdatesResponse;
 import com.dev.napolme.repository.board.NapolmeUpdateRepository;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class NapolmeUpdateService {
 
     private static final String ALLOWED_WRITE_IP = "1.236.123.32";
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
     private final NapolmeUpdateRepository napolmeUpdateRepository;
 
@@ -28,7 +32,7 @@ public class NapolmeUpdateService {
                 e.getId(),
                 e.getTitle(),
                 e.getContent(),
-                e.getCreatedAt()
+                toInstant(e.getCreatedAt())
             ))
             .toList();
         return new NapolmeUpdatesResponse(items, allowWrite);
@@ -50,7 +54,11 @@ public class NapolmeUpdateService {
             entity.getId(),
             entity.getTitle(),
             entity.getContent(),
-            entity.getCreatedAt()
+            toInstant(entity.getCreatedAt())
         );
+    }
+
+    private static Instant toInstant(LocalDateTime createdAt) {
+        return createdAt.atZone(SEOUL).toInstant();
     }
 }

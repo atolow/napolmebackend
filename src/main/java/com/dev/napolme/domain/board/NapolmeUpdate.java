@@ -7,11 +7,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "napolme_updates")
 public class NapolmeUpdate {
+
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,13 +26,13 @@ public class NapolmeUpdate {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
+    @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "DATETIME")
+    private LocalDateTime createdAt;
 
     @PrePersist
     private void onCreate() {
         if (this.createdAt == null) {
-            this.createdAt = Instant.now();
+            this.createdAt = LocalDateTime.now(SEOUL);
         }
     }
 
@@ -38,7 +41,7 @@ public class NapolmeUpdate {
     public NapolmeUpdate(String title, String content) {
         this.title = title;
         this.content = content;
-        this.createdAt = Instant.now();
+        this.createdAt = LocalDateTime.now(SEOUL);
     }
 
     public Long getId() {
@@ -61,7 +64,7 @@ public class NapolmeUpdate {
         this.content = content;
     }
 
-    public Instant getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 }

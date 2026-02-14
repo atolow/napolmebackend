@@ -7,14 +7,18 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * 캐릭터 검색 시 검색어 기록. 일일 검색 랭킹 집계용.
+ * searched_at은 한국 시간(Asia/Seoul) 기준으로 저장.
  */
 @Entity
 @Table(name = "search_logs")
 public class SearchLog {
+
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,13 +35,13 @@ public class SearchLog {
     @Column(name = "server_id", length = 10)
     private String serverId;
 
-    @Column(name = "searched_at", nullable = false, updatable = false)
-    private Instant searchedAt;
+    @Column(name = "searched_at", nullable = false, updatable = false, columnDefinition = "DATETIME")
+    private LocalDateTime searchedAt;
 
     @PrePersist
     private void onCreate() {
         if (this.searchedAt == null) {
-            this.searchedAt = Instant.now();
+            this.searchedAt = LocalDateTime.now(SEOUL);
         }
     }
 
@@ -45,20 +49,20 @@ public class SearchLog {
 
     public SearchLog(String characterName) {
         this.characterName = characterName;
-        this.searchedAt = Instant.now();
+        this.searchedAt = LocalDateTime.now(SEOUL);
     }
 
     public SearchLog(String characterName, String tribe) {
         this.characterName = characterName;
         this.tribe = tribe;
-        this.searchedAt = Instant.now();
+        this.searchedAt = LocalDateTime.now(SEOUL);
     }
 
     public SearchLog(String characterName, String tribe, String serverId) {
         this.characterName = characterName;
         this.tribe = tribe;
         this.serverId = serverId;
-        this.searchedAt = Instant.now();
+        this.searchedAt = LocalDateTime.now(SEOUL);
     }
 
     public Long getId() {
@@ -89,7 +93,7 @@ public class SearchLog {
         this.serverId = serverId;
     }
 
-    public Instant getSearchedAt() {
+    public LocalDateTime getSearchedAt() {
         return searchedAt;
     }
 }
