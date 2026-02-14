@@ -11,6 +11,8 @@ import com.dev.napolme.service.character.CharacterFetchService;
 import com.dev.napolme.service.character.CharacterSearchService;
 import com.dev.napolme.service.logging.SearchRankingService;
 import jakarta.validation.Valid;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
@@ -59,16 +61,25 @@ public class CharactersController {
     /**
      * 검색: server + name 또는 nickname 단독.
      * - server, name 있음 → 공식 API 검색 (query=name, server=server)
+     * - name만 있음 (server 없음) → 전체 서버 검색 (race 파라미터 사용 가능)
      * - nickname만 있음 → DB에 저장된 캐릭터 닉네임 검색
      */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<?>> search(
         @RequestParam(required = false) String server,
         @RequestParam(required = false) String name,
-        @RequestParam(required = false) String nickname
+        @RequestParam(required = false) String nickname,
+        @RequestParam(required = false) Integer race
     ) {
         if (nickname != null && !nickname.isBlank()) {
             List<CharacterSummaryDto> items = characterFetchService.searchByNickname(nickname);
+            String redirectUrl = null;
+            if (items.size() == 1) {
+                CharacterSummaryDto item = items.get(0);
+                redirectUrl = String.format("/character/%s/%s", 
+                    item.serverId() != null ? item.serverId() : "",
+                    URLEncoder.encode(item.characterId(), StandardCharsets.UTF_8));
+            }
             if (!items.isEmpty()) {
                 String tribe = items.get(0).tribe();
                 String serverId = items.get(0).serverId() != null ? String.valueOf(items.get(0).serverId()) : null;
@@ -79,35 +90,67 @@ public class CharactersController {
                 null,
                 items.size(),
                 items,
-                new CachePolicyDto(false, false)
+                new CachePolicyDto(false, false),
+                redirectUrl
             )));
         }
-        if (server != null && !server.isBlank() && name != null && !name.isBlank()) {
+        if (name != null && !name.isBlank()) {
             CharacterSearchRequest req = new CharacterSearchRequest();
             req.setQuery(name);
-            req.setServer(server);
+            // server가 없거나 'ALL'이면 전체 검색 (서버가 자동 판단)
+            if (server != null && !server.isBlank() && !server.equals("ALL")) {
+                req.setServer(server);
+            }
+            if (race != null) {
+                req.setRace(race);
+            }
             CharacterSearchResponse response = characterSearchService.search(req);
+            String redirectUrl = null;
+            if (response.items().size() == 1) {
+                CharacterSummaryDto item = response.items().get(0);
+                redirectUrl = String.format("/character/%s/%s", 
+                    item.serverId() != null ? item.serverId() : "",
+                    URLEncoder.encode(item.characterId(), StandardCharsets.UTF_8));
+            }
             if (!response.items().isEmpty()) {
                 String tribe = response.items().get(0).tribe();
-                searchRankingService.recordSearch(name, tribe, server);
+                String serverId = req.getServer();
+                searchRankingService.recordSearch(name, tribe, serverId);
             }
-            return ResponseEntity.ok(ApiResponse.success("OK", response, response.cache().cacheHit(), 0));
+            // redirectUrl을 포함한 새로운 응답 생성
+            CharacterSearchResponse responseWithRedirect = new CharacterSearchResponse(
+                response.query(),
+                response.server(),
+                response.total(),
+                response.items(),
+                response.cache(),
+                redirectUrl
+            );
+            return ResponseEntity.ok(ApiResponse.success("OK", responseWithRedirect, response.cache().cacheHit(), 0));
         }
         return ResponseEntity.badRequest().body(
-            ApiResponse.failure("INVALID_PARAMS", "Either 'nickname' or both 'server' and 'name' are required")
+            ApiResponse.failure("INVALID_PARAMS", "Either 'nickname' or 'name' is required")
         );
     }
 
     /**
      * serverId + characterId 로 저장 (없으면 공식 API 조회 후 저장). 상세 페이지 "정보 갱신" 시 사용.
+     * Cooldown 중이면 COOLDOWN_ACTIVE 코드 반환.
      */
     @PostMapping("/fetch-by-ref")
     public ResponseEntity<ApiResponse<CharacterResponse>> fetchByRef(
         @RequestParam String serverId,
         @RequestParam String characterId
     ) {
+        // Cooldown 체크
+        int cooldown = characterFetchService.getRemainingRefreshCooldownSeconds(serverId, characterId);
+        if (cooldown > 0) {
+            return ResponseEntity.ok(ApiResponse.failure("COOLDOWN_ACTIVE", 
+                String.format("%d초 후 다시 시도해주세요", cooldown), cooldown));
+        }
         CharacterResponse response = characterFetchService.fetchByRef(serverId, characterId);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        int newCooldown = characterFetchService.getRemainingRefreshCooldownSeconds(serverId, characterId);
+        return ResponseEntity.ok(ApiResponse.success("OK", response, false, newCooldown));
     }
 
     private static final int REFRESH_COOLDOWN_SECONDS = 60;
@@ -146,9 +189,16 @@ public class CharactersController {
 
     /**
      * 저장된 캐릭터 정보를 공식 API 기준으로 갱신. 응답 cooldown: 60(초). 이 시간 동안 재갱신 제한.
+     * Cooldown 중이면 COOLDOWN_ACTIVE 코드 반환.
      */
     @PostMapping("/{id}/refresh")
     public ResponseEntity<ApiResponse<CharacterResponse>> refresh(@PathVariable Long id) {
+        // Cooldown 체크
+        int cooldown = characterFetchService.getRemainingRefreshCooldownSeconds(id);
+        if (cooldown > 0) {
+            return ResponseEntity.ok(ApiResponse.failure("COOLDOWN_ACTIVE", 
+                String.format("%d초 후 다시 시도해주세요", cooldown), cooldown));
+        }
         CharacterResponse response = characterFetchService.refresh(id);
         return ResponseEntity.ok(ApiResponse.success("OK", response, false, REFRESH_COOLDOWN_SECONDS));
     }

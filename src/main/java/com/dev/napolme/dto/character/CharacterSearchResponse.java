@@ -8,5 +8,10 @@ public record CharacterSearchResponse(
     String server,
     int total,
     List<CharacterSummaryDto> items,
-    CachePolicyDto cache
-) {}
+    CachePolicyDto cache,
+    String redirectUrl
+) {
+    public CharacterSearchResponse(String query, String server, int total, List<CharacterSummaryDto> items, CachePolicyDto cache) {
+        this(query, server, total, items, cache, null);
+    }
+}
