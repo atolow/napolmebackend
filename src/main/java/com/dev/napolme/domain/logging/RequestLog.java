@@ -7,11 +7,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "request_logs")
 public class RequestLog {
+
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,8 +41,8 @@ public class RequestLog {
     @Column(nullable = false, name = "response_time_ms")
     private long responseTimeMs;
 
-    @Column(nullable = false, name = "created_at", updatable = false)
-    private Instant createdAt;
+    @Column(nullable = false, name = "created_at", updatable = false, columnDefinition = "DATETIME")
+    private LocalDateTime createdAt;
 
     protected RequestLog() {}
 
@@ -63,7 +66,7 @@ public class RequestLog {
 
     @PrePersist
     private void onCreate() {
-        this.createdAt = Instant.now();
+        this.createdAt = LocalDateTime.now(SEOUL);
     }
 
     public Long getId() {
@@ -98,7 +101,7 @@ public class RequestLog {
         return responseTimeMs;
     }
 
-    public Instant getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 }

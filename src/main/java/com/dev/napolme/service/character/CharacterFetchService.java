@@ -9,6 +9,8 @@ import com.dev.napolme.repository.character.SavedCharacterRepository;
 import com.dev.napolme.service.combat.CombatScoreService;
 import com.dev.napolme.util.Aion2UrlParser;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CharacterFetchService {
 
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
     private static final Logger log = LoggerFactory.getLogger(CharacterFetchService.class);
     private static final String LANG = "ko";
     /** 정보 갱신 후 재갱신 가능까지 대기 시간(초). 서버가 쿨다운을 관리한다. */
@@ -135,11 +138,11 @@ public class CharacterFetchService {
     }
 
     private int remainingCooldownFrom(SavedCharacter c) {
-        Instant last = c.getLastSyncedAt();
+        LocalDateTime last = c.getLastSyncedAt();
         if (last == null) {
             return 0;
         }
-        long elapsed = Instant.now().getEpochSecond() - last.getEpochSecond();
+        long elapsed = Instant.now().getEpochSecond() - last.atZone(SEOUL).toInstant().getEpochSecond();
         return (int) Math.max(0, REFRESH_COOLDOWN_SECONDS - elapsed);
     }
 
@@ -212,7 +215,7 @@ public class CharacterFetchService {
         c.setGuild(extractGuildFromPlayNcResponse(raw));
         c.setProfileImage(normalizeProfileImage(p.profileImage()));
         c.setItemLevel(extractItemLevel(raw));
-        c.setLastSyncedAt(Instant.now());
+        c.setLastSyncedAt(LocalDateTime.now(SEOUL));
         return c;
     }
 
@@ -226,7 +229,7 @@ public class CharacterFetchService {
         entity.setGuild(extractGuildFromPlayNcResponse(raw));
         entity.setProfileImage(normalizeProfileImage(p.profileImage()));
         entity.setItemLevel(extractItemLevel(raw));
-        entity.setLastSyncedAt(Instant.now());
+        entity.setLastSyncedAt(LocalDateTime.now(SEOUL));
     }
 
     /** PlayNC raceId → tribe: 1=천족(elyos), 2=마족(asmo) */
@@ -288,10 +291,14 @@ public class CharacterFetchService {
             c.getProfileImage(),
             c.getItemLevel(),
             c.getNapolmePoint(),
-            c.getLastSyncedAt(),
-            c.getCreatedAt(),
-            c.getUpdatedAt()
+            toInstant(c.getLastSyncedAt()),
+            toInstant(c.getCreatedAt()),
+            toInstant(c.getUpdatedAt())
         );
+    }
+
+    private static Instant toInstant(LocalDateTime ldt) {
+        return ldt == null ? null : ldt.atZone(SEOUL).toInstant();
     }
 
     private CharacterSummaryDto toSummaryDto(SavedCharacter c) {

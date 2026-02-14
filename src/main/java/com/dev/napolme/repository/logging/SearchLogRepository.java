@@ -13,13 +13,12 @@ public interface SearchLogRepository extends JpaRepository<SearchLog, Long> {
 
     /**
      * 지정 구간(한국 시간 기준 datetime) 검색 로그에서 (캐릭터명, 서버ID)별 건수 상위 10개.
-     * server_id가 있는 검색만 포함.
+     * server_id 없이 검색한 건은 NULL로 묶어서 집계.
      */
     @Query(value = """
         SELECT s.character_name AS name, s.server_id AS server_id, MAX(s.tribe) AS tribe, COUNT(*) AS cnt
         FROM search_logs s
         WHERE s.searched_at >= :dayStart AND s.searched_at < :dayEnd
-          AND s.server_id IS NOT NULL AND TRIM(s.server_id) <> ''
         GROUP BY s.character_name, s.server_id
         ORDER BY cnt DESC
         LIMIT 10

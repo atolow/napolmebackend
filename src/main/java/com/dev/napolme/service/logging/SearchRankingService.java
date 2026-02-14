@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +31,7 @@ public class SearchRankingService {
         this.searchLogRepository = searchLogRepository;
     }
 
-    @Async
+    /** 동기 처리로 검색 응답 전에 DB 반영 → 직후 일일 랭킹 조회 시 포함됨 */
     @Transactional
     public void recordSearch(String characterName, String tribe, String serverId) {
         if (characterName == null || characterName.isBlank()) {

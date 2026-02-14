@@ -8,11 +8,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.UniqueConstraint;
-import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * URL로 가져와 저장한 캐릭터 정보. ID 조회·갱신에 사용.
+ * 모든 시각 필드는 한국 시간(Asia/Seoul) 기준 DATETIME으로 저장.
  */
 @Entity
 @Table(
@@ -24,6 +27,8 @@ import java.time.Instant;
     uniqueConstraints = @UniqueConstraint(columnNames = { "server_id", "character_id" })
 )
 public class SavedCharacter {
+
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -63,18 +68,28 @@ public class SavedCharacter {
     @Column(name = "napolme_point")
     private Integer napolmePoint;
 
-    @Column(name = "last_synced_at")
-    private Instant lastSyncedAt;
+    @Column(name = "last_synced_at", columnDefinition = "DATETIME")
+    private LocalDateTime lastSyncedAt;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "DATETIME")
+    private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
-    private Instant updatedAt = Instant.now();
+    @Column(name = "updated_at", columnDefinition = "DATETIME")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now(SEOUL);
+        }
+        if (this.updatedAt == null) {
+            this.updatedAt = LocalDateTime.now(SEOUL);
+        }
+    }
 
     @PreUpdate
     void preUpdate() {
-        this.updatedAt = Instant.now();
+        this.updatedAt = LocalDateTime.now(SEOUL);
     }
 
     public Long getId() {
@@ -173,27 +188,27 @@ public class SavedCharacter {
         this.napolmePoint = napolmePoint;
     }
 
-    public Instant getLastSyncedAt() {
+    public LocalDateTime getLastSyncedAt() {
         return lastSyncedAt;
     }
 
-    public void setLastSyncedAt(Instant lastSyncedAt) {
+    public void setLastSyncedAt(LocalDateTime lastSyncedAt) {
         this.lastSyncedAt = lastSyncedAt;
     }
 
-    public Instant getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Instant createdAt) {
+    public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Instant getUpdatedAt() {
+    public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(Instant updatedAt) {
+    public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
 }
