@@ -7,6 +7,8 @@ import com.dev.napolme.dto.board.NapolmeUpdatesResponse;
 import com.dev.napolme.service.board.BoardUpdateService;
 import com.dev.napolme.service.board.NapolmeUpdateService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,11 +39,17 @@ public class BoardUpdateController {
         return ApiResponse.success("OK", response, response.cache().cacheHit(), 0);
     }
 
+    /**
+     * 응답이 클라이언트 IP에 따라 달라지므로 캐시하면 안 됨.
+     * (allowWrite는 1.236.123.32일 때만 true → 캐시 시 다른 사용자에게 잘못된 값 전달)
+     */
     @GetMapping("/napolme-updates")
-    public ApiResponse<NapolmeUpdatesResponse> getNapolmeUpdates(HttpServletRequest request) {
+    public ResponseEntity<ApiResponse<NapolmeUpdatesResponse>> getNapolmeUpdates(HttpServletRequest request) {
         String clientIp = extractClientIp(request);
         NapolmeUpdatesResponse response = napolmeUpdateService.getList(clientIp);
-        return ApiResponse.success(response);
+        return ResponseEntity.ok()
+            .cacheControl(CacheControl.noStore().mustRevalidate())
+            .body(ApiResponse.success(response));
     }
 
     @PostMapping("/napolme-updates")
