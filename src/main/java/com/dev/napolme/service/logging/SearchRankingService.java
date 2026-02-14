@@ -1,7 +1,6 @@
 package com.dev.napolme.service.logging;
 
 import com.dev.napolme.domain.logging.SearchLog;
-import com.dev.napolme.repository.logging.SearchLogRankRow;
 import com.dev.napolme.repository.logging.SearchLogRepository;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -9,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,10 +57,7 @@ public class SearchRankingService {
     @Transactional(readOnly = true)
     public synchronized List<DailySearchRankItem> getDailyTop10() {
         LocalDateTime end = LocalDateTime.now(SEOUL).plusSeconds(1);
-        List<SearchLogRankRow> rows = searchLogRepository.findDailyTop10(
-            LocalDateTime.MIN, end, PageRequest.of(0, 10)
-        );
-        List<Object[]> currentRows = toObjectArrays(rows);
+        List<Object[]> currentRows = searchLogRepository.findDailyTop10(LocalDateTime.MIN, end);
         String currentFingerprint = buildFingerprint(currentRows);
 
         // React StrictMode 등으로 동일 요청이 연속 호출되면
@@ -83,14 +78,6 @@ public class SearchRankingService {
         lastRankingFingerprint = currentFingerprint;
         lastComputedResult = List.copyOf(result);
         return lastComputedResult;
-    }
-
-    private static List<Object[]> toObjectArrays(List<SearchLogRankRow> rows) {
-        List<Object[]> list = new ArrayList<>(rows.size());
-        for (SearchLogRankRow r : rows) {
-            list.add(new Object[] { r.name(), r.serverId(), r.tribe(), r.cnt() != null ? r.cnt() : 0L });
-        }
-        return list;
     }
 
     private static String rankKey(String name, String serverId) {
