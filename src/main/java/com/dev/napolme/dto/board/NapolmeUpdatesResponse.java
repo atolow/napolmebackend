@@ -4,6 +4,5 @@ import java.util.List;
 
 public record NapolmeUpdatesResponse(
     List<NapolmeUpdateItemDto> items,
-    boolean allowWrite,
-    String seenIp
+    boolean allowWrite
 ) {}

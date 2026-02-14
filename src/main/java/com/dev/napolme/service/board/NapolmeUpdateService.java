@@ -19,7 +19,7 @@ public class NapolmeUpdateService {
         this.napolmeUpdateRepository = napolmeUpdateRepository;
     }
 
-    public NapolmeUpdatesResponse getList(String clientIp, boolean includeSeenIp) {
+    public NapolmeUpdatesResponse getList(String clientIp) {
         String ip = clientIp != null ? clientIp.trim() : "";
         boolean allowWrite = ALLOWED_WRITE_IP.equals(ip);
         List<NapolmeUpdate> list = napolmeUpdateRepository.findAllByOrderByCreatedAtDesc();
@@ -31,7 +31,7 @@ public class NapolmeUpdateService {
                 e.getCreatedAt()
             ))
             .toList();
-        return new NapolmeUpdatesResponse(items, allowWrite, includeSeenIp ? ip : null);
+        return new NapolmeUpdatesResponse(items, allowWrite);
     }
 
     @Transactional

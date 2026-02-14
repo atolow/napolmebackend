@@ -38,13 +38,9 @@ public class BoardUpdateController {
     }
 
     @GetMapping("/napolme-updates")
-    public ApiResponse<NapolmeUpdatesResponse> getNapolmeUpdates(
-        HttpServletRequest request,
-        @RequestParam(required = false) String debug
-    ) {
+    public ApiResponse<NapolmeUpdatesResponse> getNapolmeUpdates(HttpServletRequest request) {
         String clientIp = extractClientIp(request);
-        boolean includeSeenIp = "1".equals(debug);
-        NapolmeUpdatesResponse response = napolmeUpdateService.getList(clientIp, includeSeenIp);
+        NapolmeUpdatesResponse response = napolmeUpdateService.getList(clientIp);
         return ApiResponse.success(response);
     }
 
