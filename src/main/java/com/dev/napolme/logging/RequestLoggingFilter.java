@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +43,12 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         "accept-language",
         "accept-encoding",
         "content-type"
+    );
+
+    /** request_logs에 저장하지 않을 IP (내부/헬스체크 등) */
+    private static final Set<String> REQUEST_LOG_EXCLUDED_IPS = Set.of(
+        "172.31.39.105",
+        "172.31.28.131"
     );
 
     private final RequestLogService requestLogService;
@@ -86,17 +93,19 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             success = false;
             throw ex;
         } finally {
-            long durationMs = Duration.ofNanos(System.nanoTime() - startNs).toMillis();
-            RequestLog requestLog = new RequestLog(
-                requestId,
-                clientIp,
-                userAgent,
-                anonId,
-                endpoint,
-                success,
-                durationMs
-            );
-            requestLogService.saveAsync(requestLog);
+            if (!REQUEST_LOG_EXCLUDED_IPS.contains(clientIp)) {
+                long durationMs = Duration.ofNanos(System.nanoTime() - startNs).toMillis();
+                RequestLog requestLog = new RequestLog(
+                    requestId,
+                    clientIp,
+                    userAgent,
+                    anonId,
+                    endpoint,
+                    success,
+                    durationMs
+                );
+                requestLogService.saveAsync(requestLog);
+            }
         }
     }
 
