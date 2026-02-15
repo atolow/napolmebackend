@@ -73,7 +73,7 @@ public class NicknameGeneratorService {
                 request.excludeEType(),
                 request.fixedCharacters(),
                 request.excludedCharacters(),
-                18 // 18개 생성
+                16 // 16개 생성
             );
         } else if ("combination".equals(request.mode())) {
             // 조합모드: 선택된 자모로 생성
@@ -85,7 +85,7 @@ public class NicknameGeneratorService {
                 request.excludeFinalConsonant(),
                 request.fixedCharacters(),
                 request.excludedCharacters(),
-                18
+                16
             );
         }
         
