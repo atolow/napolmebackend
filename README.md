@@ -124,7 +124,8 @@ docker run -p 8080:8080 --env-file .env napolme-backend
 | `napolme_updates` | Napolme 자체 공지사항 |
 | `request_logs` | 전체 API 요청 감사 로그 (IP, UA, 응답시간 등) |
 
-라이선스
+## 라이선스
+
 This project is private and proprietary. All rights reserved.
 
-Copyright © 2026 Napolme. Unauthorized copying, distribution, or modification is strictly prohibited.
+Copyright © 2026 Miixs. Unauthorized copying, distribution, or modification is strictly prohibited.
