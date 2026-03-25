@@ -128,4 +128,4 @@ docker run -p 8080:8080 --env-file .env napolme-backend
 
 This project is private and proprietary. All rights reserved.
 
-Copyright © 2026 Miixs. Unauthorized copying, distribution, or modification is strictly prohibited.
+Copyright © 2026 Napolme. Unauthorized copying, distribution, or modification is strictly prohibited.
