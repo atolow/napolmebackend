@@ -89,9 +89,6 @@ POST /api/board/napolme-updates               # 공지 작성 (허용 IP만)
 - **요청 로깅** — UUID 요청 ID, 클라이언트 IP 추출 (Cloudflare CF-Connecting-IP 지원), 익명 쿠키 핑거프린팅
 - **CORS** — `napolme.com`, `www.napolme.com`, `localhost:5173` 허용
 
-## 환경변수
-
-## 실행 방법
 
 ### 로컬 개발
 
@@ -126,3 +123,8 @@ docker run -p 8080:8080 --env-file .env napolme-backend
 | `saved_character` | 저장된 캐릭터 프로필 (서버ID+캐릭터ID 유니크) |
 | `napolme_updates` | Napolme 자체 공지사항 |
 | `request_logs` | 전체 API 요청 감사 로그 (IP, UA, 응답시간 등) |
+
+라이선스
+This project is private and proprietary. All rights reserved.
+
+Copyright © 2026 Napolme. Unauthorized copying, distribution, or modification is strictly prohibited.
